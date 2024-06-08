@@ -88,11 +88,63 @@ INNER JOIN (
 -- LEVEL 4
 
 -- Question 10: Number of users that have used only AC chargers, DC chargers or both
+WITH charger_usage AS (
+    SELECT user_id, MIN(type) AS min_type, MAX(type) AS max_type
+    FROM sessions
+    JOIN chargers ON sessions.charger_id = chargers.id
+    GROUP BY user_id
+)
+SELECT 
+    (SELECT COUNT(*) FROM charger_usage WHERE min_type = 'AC' AND max_type = 'AC') AS ac_only_users,
+    (SELECT COUNT(*) FROM charger_usage WHERE min_type = 'DC' AND max_type = 'DC') AS dc_only_users,
+    (SELECT COUNT(*) FROM charger_usage WHERE min_type != max_type) AS both_ac_dc_users;
+
 
 -- Question 11: Monthly average number of users per charger
+WITH monthly_usage AS (
+    SELECT 
+        s.charger_id,
+        strftime('%Y-%m', s.start_time) AS month,
+        COUNT(DISTINCT user_id) AS unique_users
+    FROM sessions s
+    GROUP BY charger_id, month
+),
+av AS (
+    SELECT 
+        mu.charger_id,
+        AVG(mu.unique_users) AS avg_users
+    FROM monthly_usage mu
+    GROUP BY charger_id
+)
+SELECT 
+    AVG(avg_users) AS 'average'
+FROM av;
 
 -- Question 12: Top 3 users per charger (for each charger, number of sessions)
-
+WITH user_sessions AS (
+    SELECT
+        s.charger_id,
+        s.user_id,
+        COUNT(*) AS session_count
+    FROM sessions s
+    GROUP BY s.charger_id, s.user_id
+),
+ranked_users AS (
+    SELECT
+        us.charger_id,
+        us.user_id,
+        us.session_count,
+        RANK() OVER (PARTITION BY us.charger_id ORDER BY us.session_count DESC) AS rank
+    FROM user_sessions us
+)
+SELECT
+    ru.charger_id,
+    ru.user_id,
+    ru.session_count
+FROM ranked_users ru
+WHERE rank <= 3
+ORDER BY charger_id, rank
+LIMIT 3;
 
 
 
