@@ -151,5 +151,36 @@ LIMIT 3;
 -- LEVEL 5
 
 -- Question 13: Top 3 users with longest sessions per month (consider the month of start_time)
+WITH session_durations AS (
+    SELECT 
+        s.user_id,
+        strftime('%Y-%m', start_time) AS month,
+        (julianday(s.end_time) - julianday(s.start_time)) * 24 * 60 AS session_duration_minutes
+    FROM sessions s
+    WHERE s.end_time IS NOT NULL
+),
+monthly_user_durations AS (
+    SELECT 
+        sd.user_id,
+        sd.month,
+        SUM(session_duration_minutes) AS total_duration
+    FROM session_durations sd
+    GROUP BY user_id, month
+),
+ranked_users AS (
+    SELECT 
+        mud.user_id,
+        mud.month,
+        mud.total_duration,
+        RANK() OVER (PARTITION BY month ORDER BY mud.total_duration DESC) AS rank
+    FROM monthly_user_durations mud
+)
+SELECT 
+    ru.month,
+    ru.user_id,
+    ru.total_duration
+FROM ranked_users ru
+WHERE rank <= 3
+ORDER BY month, rank;
     
 -- Question 14. Average time between sessions for each charger for each month (consider the month of start_time)
