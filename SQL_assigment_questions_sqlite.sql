@@ -1,20 +1,40 @@
 -- LEVEL 1
 
 -- Question 1: Number of users with sessions
+SELECT
+COUNT(DISTINCT u.id) FROM users u
+INNER JOIN sessions s ON s.user_id = u.id;
 
 -- Question 2: Number of chargers used by user with id 1
-
+SELECT COUNT(DISTINCT c.id)
+FROM chargers c
+INNER JOIN sessions s ON s.charger_id = c.id AND s.user_id = 1;
 
 
 
 -- LEVEL 2
 
 -- Question 3: Number of sessions per charger type (AC/DC):
+SELECT c."type", COUNT(DISTINCT s.id) AS 'count'
+FROM sessions s
+INNER JOIN chargers c ON s.charger_id = c.id
+GROUP BY c."type";
 
 -- Question 4: Chargers being used by more than one user
+SELECT *
+FROM chargers c
+WHERE c.id IN (
+	SELECT s.charger_id
+	FROM sessions s
+	GROUP BY s.charger_id
+	HAVING COUNT(s.charger_id) > 1
+);
 
 -- Question 5: Average session time per charger
-
+SELECT c.id, AVG(ROUND(JULIANDAY(s.start_time), JULIANDAY(s.end_time) * 86400)) AS 'average time'
+FROM chargers c
+INNER JOIN sessions s ON s.charger_id = c.id
+GROUP BY c.id;
 
 
 
