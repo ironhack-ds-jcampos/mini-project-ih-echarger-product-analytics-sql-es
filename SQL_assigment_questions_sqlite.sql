@@ -184,3 +184,33 @@ WHERE rank <= 3
 ORDER BY month, rank;
     
 -- Question 14. Average time between sessions for each charger for each month (consider the month of start_time)
+WITH session_times AS (
+    SELECT 
+        s.charger_id,
+        strftime('%Y-%m', s.start_time) AS month,
+        s.start_time
+    FROM sessions s
+),
+lagged_sessions AS (
+    SELECT
+        st.charger_id,
+        st.month,
+        st.start_time,
+        LAG(st.start_time) OVER (PARTITION BY st.charger_id, month ORDER BY start_time) AS previous_start_time
+    FROM session_times st
+),
+time_differences AS (
+    SELECT
+        ls.charger_id,
+        ls.month,
+        (julianday(ls.start_time) - julianday(ls.previous_start_time)) * 24 * 60 AS time_diff_minutes
+    FROM lagged_sessions ls
+    WHERE ls.previous_start_time IS NOT NULL
+)
+SELECT
+    td.charger_id,
+    td.month,
+    AVG(td.time_diff_minutes) AS avg_time_between_sessions
+FROM time_differences td
+GROUP BY td.charger_id, month
+ORDER BY td.charger_id, month;
