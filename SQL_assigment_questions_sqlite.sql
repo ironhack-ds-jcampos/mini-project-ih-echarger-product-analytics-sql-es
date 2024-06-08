@@ -41,13 +41,47 @@ GROUP BY c.id;
 -- LEVEL 3
 
 -- Question 6: Full username of users that have used more than one charger in one day (NOTE: for date only consider start_time)
+SELECT CONCAT(u.name, ' ', u.surname) AS 'Full username'
+FROM users u
+INNER JOIN (
+	SELECT STRFTIME('%d', s.start_time) as 'day', s.user_id, COUNT(DISTINCT c.id) AS 'count'
+	FROM sessions s
+	INNER JOIN chargers c ON s.charger_id = c.id
+	GROUP BY 1,2
+) sess ON sess.count > 1 AND sess.user_id = u.id;
 
 -- Question 7: Top 3 chargers with longer sessions
+SELECT *
+FROM chargers c2
+WHERE c2.id IN (
+	SELECT DISTINCT c.id
+	FROM chargers c
+	INNER JOIN sessions s ON s.charger_id = c.id
+	ORDER BY ROUND(JULIANDAY(s.start_time), JULIANDAY(s.end_time) * 86400) DESC
+	LIMIT 3
+);
 
 -- Question 8: Average number of users per charger (per charger in general, not per charger_id specifically)
+SELECT AVG(co.count) AS 'average'
+FROM (
+	SELECT COUNT(DISTINCT u.id) AS 'count'
+	FROM users u
+	INNER JOIN sessions s ON s.user_id = u.id
+	INNER JOIN chargers c ON c.id = s.charger_id
+	GROUP BY c."type"
+) co;
 
 -- Question 9: Top 3 users with more chargers being used
-
+SELECT *
+FROM users u2
+INNER JOIN (
+	SELECT u.id AS 'user_id', COUNT(DISTINCT s.charger_id) AS 'chargers_amount'
+	FROM users u
+	INNER JOIN sessions s ON s.user_id = u.id
+	GROUP BY u.id
+	ORDER BY 2 DESC
+	LIMIT 3
+) uc ON uc.user_id = u2.id;
 
 
 
